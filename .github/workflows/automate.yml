@@ -43,7 +43,7 @@ jobs:
           echo "Recursive listing (first 500 lines):"
           ls -R | head -n 500
 
-      - name: Find and run generate_report.py
+      - name: Find and run teater_impact_of_students.py
         id: run_script
         run: |
           set -euo pipefail
