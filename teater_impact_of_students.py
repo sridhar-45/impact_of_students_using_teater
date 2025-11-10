@@ -31,9 +31,10 @@ from functools import reduce
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT", "3306")
+DB_PORT = os.getenv("DB_PORT", "3306")   # default to 3306 if not provided
 DB_NAME = os.getenv("DB_NAME")
 
+EMAIL_USER = os.getenv("EMAIL_USER")
 
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
@@ -43,7 +44,36 @@ SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 # Active colleges list
 ACTIVE_COLLEGES = (9, 21, 27, 28, 29, 32, 36, 40, 41, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77)
 
-print(f"🔗 Connecting to database: {DB_NAME} at {DB_HOST}")
+# Validate required env vars and fail fast with a helpful message
+required = {
+    "DB_USER": DB_USER,
+    "DB_PASS": DB_PASS,
+    "DB_HOST": DB_HOST,
+    "DB_NAME": DB_NAME,
+    "EMAIL_USER": EMAIL_USER,
+    "EMAIL_PASS": EMAIL_PASS
+}
+missing = [k for k, v in required.items() if not v]
+
+if missing:
+    # Fail early with a clear message (do not print secret values)
+    raise SystemExit(
+        "Missing required environment variables: "
+        + ", ".join(missing)
+        + ".\nPlease set them in GitHub Actions Secrets or your environment."
+    )
+
+# Ensure DB_PORT is a valid integer; fall back to 3306 if invalid/empty
+try:
+    DB_PORT_INT = int(DB_PORT)
+except Exception:
+    print(f"⚠️  DB_PORT value invalid or empty ('{DB_PORT}'). Falling back to 3306.")
+    DB_PORT_INT = 3306
+
+print(f"🔗 Connecting to database: {DB_NAME} at {DB_HOST}:{DB_PORT_INT}")
+# --- end of block ---
+
+
 
 # ==========================================
 # DATABASE CONNECTION
