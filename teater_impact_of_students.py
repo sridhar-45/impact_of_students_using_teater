@@ -656,7 +656,7 @@ def send_email_report(result_df, combined_df):
     </head>
     <body>
     <div class="container">
-        <h2>📊 Daily Feature Impact Summary Report</h2>
+        <h2>📊 Daily Impact Summary Report</h2>
         <p>Hi Sir,</p>
         <p>
             I hope you're doing well.<br><br>
@@ -686,10 +686,10 @@ def send_email_report(result_df, combined_df):
     
     # Create email message
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"📈 Daily TEATER Usage Report - {today.strftime('%d-%b-%Y')}"
-    msg["From"] = EMAIL_USER or "sridhar@edwisely.com"
-    msg["To"] = "sridhargoudu7@gmail.com"
-    msg["Cc"] = "sridhargoudu143@gmail.com"
+    msg["Subject"] = f"📈 Daily Impact Usage Report - {today.strftime('%d-%b-%Y')}"
+    msg["From"] = EMAIL_USER 
+    msg["To"] =  "yash@edwisely.com"
+    msg["Cc"] = "narsimha@edwisely.com,prahalya@edwisely.com"
     
     # Attach HTML body
     msg.attach(MIMEText(html_content, "html"))
