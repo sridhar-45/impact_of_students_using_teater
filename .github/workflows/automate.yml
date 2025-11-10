@@ -3,7 +3,7 @@ name: Daily Excel Automation
 # Schedule: 8:00 AM IST → 2:30 AM UTC
 on:
   schedule:
-    - cron: '30 2 * * *'   # Runs daily at 08:00 AM IST (UTC+5:30)
+    - cron: '30 0 * * *'   # Runs daily at 08:00 AM IST (UTC+5:30)
   workflow_dispatch:         # Allow manual trigger
 
 jobs:
