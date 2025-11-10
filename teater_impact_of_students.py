@@ -28,13 +28,14 @@ from functools import reduce
 # ==========================================
 # CONFIGURATION - Load from Environment Variables
 # ==========================================
-DB_USER = os.getenv("DB_USER", "prod-read-user")
-DB_PASS = os.getenv("DB_PASS", 'UY8C&"W>&A6I*g$WTCbb50rn')
-DB_HOST = os.getenv("DB_HOST", "proddb-read-replica.crhg7zleeuhf.ap-south-1.rds.amazonaws.com")
-DB_PORT = os.getenv("DB_PORT", "3306")
-DB_NAME = os.getenv("DB_NAME", "edwisely_college")
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
 
-EMAIL_USER = os.getenv("EMAIL_USER")
+
+ EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
@@ -625,11 +626,11 @@ def send_email_report(result_df, combined_df):
     </head>
     <body>
     <div class="container">
-        <h2>📊 Daily Feature Utility Summary Report</h2>
+        <h2>📊 Daily Feature Impact Summary Report</h2>
         <p>Hi Sir,</p>
         <p>
             I hope you're doing well.<br><br>
-            Please find below the latest <b>Feature Utility Pivot Table</b> and <b>Chart Summary</b> 
+            Please find below the latest <b>Feature impact Table</b> and <b>Chart Summary</b> 
             automatically generated.<br><br>
             This data reflects the usage activity from 
             <b>{start_date}</b> to <b>{end_date}</b>.<br><br>
@@ -665,7 +666,7 @@ def send_email_report(result_df, combined_df):
     
     # Attach Excel file
     part = MIMEApplication(output.read(), _subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    part.add_header('Content-Disposition', 'attachment', filename="OVERALL_TEATER_DAILY_USAGE.xlsx")
+    part.add_header('Content-Disposition', 'attachment', filename="IMPACT_TEATER_DAILY_USAGE.xlsx")
     msg.attach(part)
 
     # ✅ Send via Gmail SMTP
