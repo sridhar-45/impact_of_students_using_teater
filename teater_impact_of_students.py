@@ -35,7 +35,7 @@ DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 
 
- EMAIL_USER = os.getenv("EMAIL_USER")
+EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
