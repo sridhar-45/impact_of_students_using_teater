@@ -451,20 +451,24 @@ def get_remediate_data():
     print("🔧 Fetching REMEDIATE data...")
     
     query = f"""
-    SELECT 
-        c.id AS college_id,
-        c.college_name,
-        COUNT(DISTINCT CONCAT(qrp.questionnaire_id, '-', scd.student_id)) AS total_remediate_count
-    FROM college c
-    LEFT JOIN student_college_details scd ON scd.college_id = c.id
-    LEFT JOIN survey_has_students shs ON shs.student_id = scd.student_id 
-    LEFT JOIN questionnaire_remedial_path qrp ON qrp.student_id = scd.student_id 
-    LEFT JOIN questionnaire q ON q.id = qrp.questionnaire_id  
-        AND qrp.created_at BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
-                             AND CONCAT(CURDATE(), ' 08:00:00')
-    WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name
-    ORDER BY total_remediate_count DESC;
+        SELECT 
+          c.id AS college_id,
+          c.college_name,
+          COUNT(DISTINCT CONCAT(q.id, '-', scd.student_id)) AS total_remediate_count
+        FROM college c
+        LEFT JOIN student_college_details scd 
+          ON scd.college_id = c.id
+        LEFT JOIN questionnaire_remedial_path qrp 
+          ON qrp.student_id  = scd.student_id 
+        LEFT JOIN questionnaire q
+        	ON q.id = qrp.questionnaire_id  
+            AND q.remedial_path = 1
+          AND qrp.created_at  BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
+                                 AND CONCAT(CURDATE(), ' 08:00:00')
+        WHERE c.id IN (9,21,27,28,29,32,36,40,41,64,65,66,67,68,69,70,71,72,73,74,75,76,77)
+        GROUP BY c.id, c.college_name
+        ORDER BY total_remediate_count DESC;
+
     """
     
     df = execute_query(query)
