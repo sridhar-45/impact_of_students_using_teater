@@ -39,6 +39,7 @@ DB_NAME = os.getenv("DB_NAME")
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 
+
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 
 # Active colleges list
@@ -104,32 +105,6 @@ def execute_query(query):
         print(f"❌ Query execution error: {e}")
         raise
 
-# def send_slack_notification(message=None, blocks=None):
-#     """Send notification to Slack webhook"""
-#     if not SLACK_WEBHOOK_URL:
-#         print("⚠️  Slack webhook URL not configured. Skipping Slack notification.")
-#         return False
-    
-#     try:
-#         payload = {}
-#         if blocks:
-#             payload["blocks"] = blocks
-#             if message:
-#                 payload["text"] = message  # Fallback text
-#         else:
-#             payload["text"] = message or "📊 Daily TEATER Report Generated"
-        
-#         response = requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=10)
-        
-#         if response.status_code == 200:
-#             print("✅ Slack notification sent successfully!")
-#             return True
-#         else:
-#             print(f"❌ Slack notification failed: {response.status_code}")
-#             return False
-#     except Exception as e:
-#         print(f"❌ Error sending Slack notification: {e}")
-#         return False
 
 # ==========================================
 # DATA EXTRACTION - TEACH MODULE
@@ -146,15 +121,18 @@ def get_teach_data():
     FROM college c
     LEFT JOIN student_college_details scd 
         ON scd.college_id = c.id
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
     LEFT JOIN student_attendance sa 
         ON sa.student_id = scd.student_id
     LEFT JOIN faculty_class_hours fch 
         ON sa.faculty_class_hour_id = fch.id
+        AND fch.entry_date IS NOT NULL
         AND fch.entry_date BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name
-    ORDER BY total_attendance DESC;
+    GROUP BY c.id;
     """
     
     df = execute_query(query)
@@ -174,15 +152,19 @@ def get_engage_data():
     SELECT 
         c.id AS college_id,
         c.college_name,
-        COUNT(DISTINCT CONCAT(ql.id, '-', scd.student_id)) AS total_attendance
+        COUNT(DISTINCT CONCAT(ql.id, '-', scd.student_id)) AS total_live_assignment
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
     LEFT JOIN questionnaire_live_has_students qlhs ON qlhs.student_id = scd.student_id 
     LEFT JOIN questionnaire_live ql ON ql.id = qlhs.questionnaire_id 
+        AND ql.start_time IS NOT NULL
         AND ql.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Live Survey
@@ -193,12 +175,16 @@ def get_engage_data():
         COUNT(DISTINCT CONCAT(ls.id, '-', scd.student_id)) AS total_live_survey
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
     LEFT JOIN live_survey_submissions lss ON lss.student_id = scd.student_id 
     LEFT JOIN live_surveys ls ON ls.id = lss.live_survey_id 
+        AND ls.start_time IS NOT NULL
         AND ls.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Notifications
@@ -209,12 +195,15 @@ def get_engage_data():
         COUNT(DISTINCT CONCAT(n.id, '-', scd.student_id)) AS total_notify_count
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+          AND  scd.active_status = 1
+          AND scd.test = 0
+          AND  scd.temp_column_1 = 0
     LEFT JOIN notifications_has_students nhs ON nhs.student_id = scd.student_id
     LEFT JOIN notifications n ON n.id = nhs.notifications_id 
         AND n.created_at BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Live Classes
@@ -225,13 +214,45 @@ def get_engage_data():
         COUNT(DISTINCT CONCAT(vc.id, '-', scd.student_id)) AS total_live_class_count
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
     LEFT JOIN video_conference_has_students vchs ON vchs.student_id = scd.student_id
     LEFT JOIN video_conference vc ON vc.id = vchs.video_conference_id 
+        AND vc.start_time IS NOT NULL
         AND vc.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
+
+
+    #case study..
+    case_study_df = execute_query(f"""
+    
+            SELECT 
+                c.id AS college_id, 
+                c.college_name, 
+                COUNT(DISTINCT CONCAT(csa.id, "-", scd.student_id)) AS case_study_count
+            FROM college c
+            LEFT JOIN student_college_details scd
+                ON scd.college_id = c.id
+                AND  scd.active_status = 1
+                AND scd.test = 0
+                AND  scd.temp_column_1 = 0
+            LEFT JOIN college_subject_mapping csm
+                ON csm.regulation_batch_mapping_id = scd.regulation_batch_mapping_id
+            LEFT JOIN case_study_assignments csa
+                ON csa.college_subject_mapping_id = csm.id
+                AND csa.start_date is not null
+                AND csa.start_date BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
+                                       AND CONCAT(CURDATE(), ' 08:00:00')
+            WHERE c.id IN (9,21,27,28,29,32,36,40,41,64,65,66,67,68,69,70,71,72,73,74,75,76,77)   
+            GROUP BY c.id;
+        
+    """)
+
+
     
     # Projects
     project_df = execute_query(f"""
@@ -241,12 +262,16 @@ def get_engage_data():
         COUNT(DISTINCT CONCAT(ap.id, '-', scd.student_id)) AS total_projects_count
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+          AND  scd.active_status = 1
+          AND scd.test = 0
+          AND  scd.temp_column_1 = 0
     LEFT JOIN academic_project_has_students aphs ON aphs.student_id = scd.student_id
     LEFT JOIN academic_projects ap ON ap.id = aphs.academic_project_id 
+        AND ap.start_time IS NOT NULL
         AND ap.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Arena (Weekly Challenges)
@@ -257,28 +282,38 @@ def get_engage_data():
         COUNT(DISTINCT CONCAT(wc.id, '-', scd.student_id)) AS total_arena_count
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+          AND  scd.active_status = 1
+          AND scd.test = 0
+          AND  scd.temp_column_1 = 0
     LEFT JOIN weekly_challenge_participants wcp ON wcp.student_id = scd.student_id
     LEFT JOIN weekly_challenge wc ON wc.id = wcp.weekly_challenge_id 
         AND wc.created_at BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Go Code
     go_code_df = execute_query(f"""
-    SELECT 
-        c.id AS college_id,
-        c.college_name,
-        COUNT(DISTINCT CONCAT(ap.id, '-', scd.student_id)) AS total_go_code_count
-    FROM college c
-    LEFT JOIN student_college_details scd ON scd.college_id = c.id
-    LEFT JOIN academic_project_has_students aphs ON aphs.student_id = scd.student_id
-    LEFT JOIN academic_projects ap ON ap.id = aphs.academic_project_id 
-        AND ap.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
-                             AND CONCAT(CURDATE(), ' 08:00:00')
-    WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+            SELECT 
+                c.id AS college_id, 
+                c.college_name, 
+                COUNT(DISTINCT CONCAT(ctq.id, "-", scd.student_id)) AS go_code_count
+            FROM college c
+            LEFT JOIN student_college_details scd
+                ON scd.college_id = c.id
+                AND  scd.active_status = 1
+                AND scd.test = 0
+                AND  scd.temp_column_1 = 0
+            LEFT JOIN student_coding_track_question_submissions sctqs 
+                ON sctqs.student_id  = scd.student_id 
+            LEFT JOIN coding_track_questions ctq 
+                ON ctq.id = sctqs.question_id 
+                AND sctqs.created_at  is not null
+                AND sctqs.created_at BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
+                                       AND CONCAT(CURDATE(), ' 08:00:00')
+            WHERE c.id IN (9,21,27,28,29,32,36,40,41,64,65,66,67,68,69,70,71,72,73,74,75,76,77)   
+            GROUP BY c.id;
     """)
     
     # Merge all engagement metrics
@@ -310,12 +345,16 @@ def get_assess_data():
         COUNT(DISTINCT CONCAT(q.id, '-', scd.student_id)) AS total_objective_count
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
     LEFT JOIN questionnaire_has_students qhs ON qhs.student_id = scd.student_id
-    LEFT JOIN questionnaire q ON q.id = qhs.questionnaire_id  
+    LEFT JOIN questionnaire q ON q.id = qhs.questionnaire_id 
+        AND q.start_time IS NOT NULL
         AND q.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Subjective Tests
@@ -326,13 +365,39 @@ def get_assess_data():
         COUNT(DISTINCT CONCAT(qs.id, '-', scd.student_id)) AS total_subjective_count
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
     LEFT JOIN questionnaire_subjective_has_students qshs ON qshs.student_id = scd.student_id 
     LEFT JOIN questionnaire_subjective qs ON qs.id = qshs.questionnaire_id
+        AND qs.start_time 
+        AND qs.is_assignment = 0
         AND qs.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
+
+    #Assignment Count
+    assignment_df = execute_query(f"""
+        SELECT 
+            c.id AS college_id,
+            c.college_name,
+            COUNT(DISTINCT CONCAT(qs.id, '-', scd.student_id)) AS total_Assignment_count
+        FROM college c
+        LEFT JOIN student_college_details scd ON scd.college_id = c.id
+            AND  scd.active_status = 1
+            AND scd.test = 0
+            AND  scd.temp_column_1 = 0
+        LEFT JOIN questionnaire_subjective_has_students qshs ON qshs.student_id = scd.student_id 
+        LEFT JOIN questionnaire_subjective qs ON qs.id = qshs.questionnaire_id
+            AND qs.start_time 
+            AND qs.is_assignment = 1
+            AND qs.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
+                                 AND CONCAT(CURDATE(), ' 08:00:00')
+        WHERE c.id IN {ACTIVE_COLLEGES}
+        GROUP BY c.id;
+        """)
     
     # Coding Tests
     coding_df = execute_query(f"""
@@ -342,18 +407,24 @@ def get_assess_data():
         COUNT(DISTINCT CONCAT(ct.id, '-', scd.student_id)) AS total_coding_count
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
     LEFT JOIN coding_test_has_students cths ON cths.student_id = scd.student_id
     LEFT JOIN coding_test ct ON ct.id = cths.test_id 
+        AND ct.start_time IS NOT NULL
         AND ct.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Merge all assessment metrics
     final_df = (objective_df
+        .merge(assignment_df, on=["college_id", "college_name"], how="left")
         .merge(subjective_df, on=["college_id", "college_name"], how="left")
         .merge(coding_df, on=["college_id", "college_name"], how="left"))
+       
     
     final_df.fillna(0, inplace=True)
     total_assess = final_df.select_dtypes(include='number').sum().sum()
@@ -375,12 +446,16 @@ def get_track_data():
         COUNT(DISTINCT CONCAT(ff.id, '-', scd.student_id)) AS total_faculty_feedback
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
     LEFT JOIN faculty_feedback_students ffs ON ffs.student_id = scd.student_id 
     LEFT JOIN faculty_feedback ff ON ff.id = ffs.feedback_id  
+        AND ff.start_time IS NOT NULL
         AND ff.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Semester Feedback
@@ -391,12 +466,16 @@ def get_track_data():
         COUNT(DISTINCT CONCAT(sf.id, '-', scd.student_id)) AS total_semester_feedback
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
-    LEFT JOIN semester_feedback_has_students sfhs ON sfhs.student_id = scd.student_id 
-    LEFT JOIN semester_feedback sf ON sf.id = sfhs.semester_feedback_id   
+    LEFT JOIN semester_feedback_has_students sfhs ON sfhs.student_id = scd.student_id\
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
+    LEFT JOIN semester_feedback sf ON sf.id = sfhs.semester_feedback_id  
+        AND sf.start_time IS NOT NULL
         AND sf.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Regular Feedback
@@ -407,12 +486,16 @@ def get_track_data():
         COUNT(DISTINCT CONCAT(s.id, '-', scd.student_id)) AS total_regular_feedback
     FROM college c
     LEFT JOIN student_college_details scd ON scd.college_id = c.id
+        AND  scd.active_status = 1
+        AND scd.test = 0
+        AND  scd.temp_column_1 = 0
     LEFT JOIN survey_has_students shs ON shs.student_id = scd.student_id 
     LEFT JOIN survey s ON s.id = shs.survey_id 
+        AND s.start_time IS NOT NULL
         AND s.start_time BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                              AND CONCAT(CURDATE(), ' 08:00:00')
     WHERE c.id IN {ACTIVE_COLLEGES}
-    GROUP BY c.id, c.college_name;
+    GROUP BY c.id;
     """)
     
     # Merge all tracking metrics
@@ -458,6 +541,9 @@ def get_remediate_data():
         FROM college c
         LEFT JOIN student_college_details scd 
           ON scd.college_id = c.id
+          AND  scd.active_status = 1
+          AND scd.test = 0
+          AND  scd.temp_column_1 = 0
         LEFT JOIN questionnaire_remedial_path qrp 
           ON qrp.student_id  = scd.student_id 
         LEFT JOIN questionnaire q
@@ -466,8 +552,7 @@ def get_remediate_data():
           AND qrp.created_at  BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
                                  AND CONCAT(CURDATE(), ' 08:00:00')
         WHERE c.id IN (9,21,27,28,29,32,36,40,41,64,65,66,67,68,69,70,71,72,73,74,75,76,77)
-        GROUP BY c.id, c.college_name
-        ORDER BY total_remediate_count DESC;
+        GROUP BY c.id;
 
     """
     
@@ -752,7 +837,6 @@ def teater_generation():
 # For local testing
 if __name__ == "__main__":
     teater_generation()
-
 
 
 
