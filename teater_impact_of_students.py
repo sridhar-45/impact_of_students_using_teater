@@ -692,8 +692,9 @@ def send_email_report(result_df, combined_df):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"📈 Daily Impact Usage Report - {today.strftime('%d-%b-%Y')}"
     msg["From"] = EMAIL_USER 
-    msg["To"] =  "yash@edwisely.com"
-    msg["Cc"] = "narsimha@edwisely.com,prahalya@edwisely.com"
+    # msg["To"] =  "yash@edwisely.com"
+    # msg["Cc"] = "narsimha@edwisely.com,prahalya@edwisely.com"
+    msg["To"] =  "sridhargoudu7@gmail.com"
     
     # Attach HTML body
     msg.attach(MIMEText(html_content, "html"))
