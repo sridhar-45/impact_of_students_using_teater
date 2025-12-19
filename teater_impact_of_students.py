@@ -293,28 +293,28 @@ def get_engage_data():
     GROUP BY c.id;
     """)
     
-    # Go Code
-    go_code_df = execute_query(f"""
-            SELECT 
-                c.id AS college_id, 
-                c.college_name, 
-                COUNT(DISTINCT CONCAT(ctq.id, "-", scd.student_id)) AS go_code_count
-            FROM college c
-            LEFT JOIN student_college_details scd
-                ON scd.college_id = c.id
-                AND  scd.active_status = 1
-                AND scd.test = 0
-                AND  scd.temp_column_1 = 0
-            LEFT JOIN student_coding_track_question_submissions sctqs 
-                ON sctqs.student_id  = scd.student_id 
-            LEFT JOIN coding_track_questions ctq 
-                ON ctq.id = sctqs.question_id 
-                AND sctqs.created_at  is not null
-                AND sctqs.created_at BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
-                                       AND CONCAT(CURDATE(), ' 08:00:00')
-            WHERE c.id IN (9,21,27,28,29,32,36,40,41,64,65,66,67,68,69,70,71,72,73,74,75,76,77)   
-            GROUP BY c.id;
-    """)
+    # # Go Code
+    # go_code_df = execute_query(f"""
+    #         SELECT 
+    #             c.id AS college_id, 
+    #             c.college_name, 
+    #             COUNT(DISTINCT CONCAT(ctq.id, "-", scd.student_id)) AS go_code_count
+    #         FROM college c
+    #         LEFT JOIN student_college_details scd
+    #             ON scd.college_id = c.id
+    #             AND  scd.active_status = 1
+    #             AND scd.test = 0
+    #             AND  scd.temp_column_1 = 0
+    #         LEFT JOIN student_coding_track_question_submissions sctqs 
+    #             ON sctqs.student_id  = scd.student_id 
+    #         LEFT JOIN coding_track_questions ctq 
+    #             ON ctq.id = sctqs.question_id 
+    #             AND sctqs.created_at  is not null
+    #             AND sctqs.created_at BETWEEN DATE_SUB(CONCAT(CURDATE(), ' 08:00:00'), INTERVAL 1 DAY)
+    #                                    AND CONCAT(CURDATE(), ' 08:00:00')
+    #         WHERE c.id IN (9,21,27,28,29,32,36,40,41,64,65,66,67,68,69,70,71,72,73,74,75,76,77)   
+    #         GROUP BY c.id;
+    # """)
     
     # Merge all engagement metrics
     final_df = (questionnaire_df
@@ -322,8 +322,8 @@ def get_engage_data():
         .merge(notify_df, on=["college_id", "college_name"], how="left")
         .merge(live_class_df, on=["college_id", "college_name"], how="left")
         .merge(project_df, on=["college_id", "college_name"], how="left")
-        .merge(arena_df, on=["college_id", "college_name"], how="left")
-        .merge(go_code_df, on=["college_id", "college_name"], how="left"))
+        .merge(arena_df, on=["college_id", "college_name"], how="left"))
+        # .merge(go_code_df, on=["college_id", "college_name"], how="left"))
     
     final_df.fillna(0, inplace=True)
     total_engage = final_df.select_dtypes(include='number').sum().sum()
@@ -777,9 +777,9 @@ def send_email_report(result_df, combined_df):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"📈 Daily Impact Usage Report - {today.strftime('%d-%b-%Y')}"
     msg["From"] = EMAIL_USER 
-    msg["To"] =  "yash@edwisely.com"
-    msg["Cc"] = "prahalya@edwisely.com"
-    # msg["To"] =  "sridhargoudu7@gmail.com"
+    # msg["To"] =  "yash@edwisely.com"
+    # msg["Cc"] = "prahalya@edwisely.com"
+    msg["To"] =  "sridhargoudu7@gmail.com"
     
     # Attach HTML body
     msg.attach(MIMEText(html_content, "html"))
