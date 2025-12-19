@@ -778,7 +778,7 @@ def send_email_report(result_df, combined_df):
     msg["Subject"] = f"📈 Daily Impact Usage Report - {today.strftime('%d-%b-%Y')}"
     msg["From"] = EMAIL_USER 
     msg["To"] =  "yash@edwisely.com"
-    msg["Cc"] = "narsimha@edwisely.com,prahalya@edwisely.com"
+    msg["Cc"] = "prahalya@edwisely.com"
     # msg["To"] =  "sridhargoudu7@gmail.com"
     
     # Attach HTML body
