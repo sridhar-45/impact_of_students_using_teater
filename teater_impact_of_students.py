@@ -1,4 +1,5 @@
 """
+--
 TEATER Daily Impact Report - Automated Generation Script
 Converts Jupyter Notebook queries into production-ready automation
 
