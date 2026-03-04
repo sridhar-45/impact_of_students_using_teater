@@ -8,7 +8,7 @@ This script:
 2. Extracts TEATER metrics (Teach, Engage, Assess, Track, Analyse, Remediate)
 3. Generates comprehensive Excel reports
 4. Sends email with embedded HTML table and Excel attachment
-5. Posts summary to Slack channel
+5. Posts summary to Slack channel      --
 
 Author: Sridhar Goudu
 Organization: Edwisely
