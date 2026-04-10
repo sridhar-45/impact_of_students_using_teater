@@ -26,7 +26,7 @@ import smtplib
 import requests
 from functools import reduce
 
-# ==========================================
+# ================================================
 # CONFIGURATION - Load from Environment Variables
 # ==========================================
 DB_USER = os.getenv("DB_USER")
